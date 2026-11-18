@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Intelligence Check</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/assets/app.css">
+  <script type="module" src="/assets/app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主内容</a>
+<header class="header">
+  <div class="header-inner">
+    <a class="brand" href="/" aria-label="Intelligence Check 首页"><img src="/assets/icon.png" width="36" height="36" alt=""><h1>Intelligence Check</h1></a>
+    <div class="header-tools">
+      <span id="health" class="service-state" role="status">连接中</span>
+      <button id="theme" class="icon-button" aria-label="切换为亮色" data-tooltip="切换为亮色" data-icon="Sun"></button>
+      <button id="settings" class="icon-button" aria-label="连接与预算设置" data-tooltip="连接与预算" data-icon="Settings2"></button>
+      <button id="closeRemote" class="icon-button" aria-label="结束远程访问" data-tooltip="结束远程访问" data-icon="Power"></button>
+    </div>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+  <div id="message" class="feedback" role="alert"></div>
+  <div id="connectionNotice" class="connection-notice" hidden><span>尚未连接 Magpie 网关</span><button id="connectSettings" class="text-button">连接设置 <i data-icon="ArrowUpRight"></i></button></div>
+  <section class="overview" aria-label="监测概览">
+    <div class="stat"><span>监测模型</span><strong id="statEnabled">0</strong></div>
+    <div class="stat"><span>有效通过</span><strong id="statPassed">0</strong></div>
+    <div class="stat"><span>待处理</span><strong id="statReview">0</strong></div>
+    <div class="stat"><span>今日探针</span><strong id="statRequests">0</strong></div>
+  </section>
+  <nav class="tabs" role="tablist" aria-label="控制台视图">
+    <button id="tab-models" role="tab" aria-selected="true" aria-controls="view-models" data-view="models"><i data-icon="Monitor"></i>模型监测<span id="targetCount" class="tab-count">0</span></button>
+    <button id="tab-tests" role="tab" aria-selected="false" aria-controls="view-tests" tabindex="-1" data-view="tests"><i data-icon="FlaskConical"></i>质量题库</button>
+    <button id="tab-fingerprint" role="tab" aria-selected="false" aria-controls="view-fingerprint" tabindex="-1" data-view="fingerprint"><i data-icon="Fingerprint"></i>模型指纹</button>
+    <button id="tab-history" role="tab" aria-selected="false" aria-controls="view-history" tabindex="-1" data-view="history"><i data-icon="History"></i>检测记录</button>
+  </nav>
+  <section id="view-models" class="view" role="tabpanel" aria-labelledby="tab-models">
+    <div class="section-heading"><h2>主力模型</h2><span class="meta">通过结果有效期 15 分钟</span></div>
+    <form id="target" class="add-target">
+      <label class="grow"><span class="sr-only">完整模型 ID</span><input name="model" list="catalog" aria-label="完整模型 ID" placeholder="provider/model" required autocomplete="off"><datalist id="catalog"></datalist></label>
+      <button type="button" id="loadModels" class="secondary"><i data-icon="RefreshCw"></i><span>刷新模型</span></button>
+      <button class="primary"><i data-icon="Plus"></i><span>添加监测目标</span></button>
+    </form>
+    <div class="table-wrap">
+      <table class="targets-table"><thead><tr><th>模型</th><th>状态</th><th>最近通过</th><th>今日预算</th><th class="align-right">操作</th></tr></thead><tbody id="targets"></tbody></table>
+    </div>
+  </section>
+  <section id="view-tests" class="view" role="tabpanel" aria-labelledby="tab-tests" hidden>
+    <div class="section-heading"><h2>质量题库</h2><span class="meta">7 道题目</span></div>
+    <div class="test-controls">
+      <label>测试模型<select id="model" aria-label="测试模型"></select></label>
+      <label>测试题<select id="prompt" aria-label="测试题"></select></label>
+      <button id="run" class="primary"><i data-icon="Play"></i><span>运行所选题目</span></button>
+      <button id="cancelTest" class="icon-button" aria-label="取消当前质量检测" data-tooltip="取消当前质量检测" data-icon="X" hidden></button>
+    </div>
+    <p id="testStatus" class="inline-state" role="status"></p>
+    <div class="answer-heading"><h2>模型回答</h2><div class="answer-tools"><label><span class="sr-only">回答记录</span><select id="testRecord" aria-label="回答记录"></select></label><button id="copyAnswer" class="icon-button" aria-label="复制回答" data-tooltip="复制回答" data-icon="Copy" disabled></button><a id="downloadAnswer" class="icon-button" aria-label="下载回答" title="下载回答" hidden><i data-icon="Download"></i></a></div></div>
+    <p id="answerMeta" class="meta"></p>
+    <p id="answerError" class="inline-state error" role="alert" hidden></p>
+    <div id="svgPreview" class="svg-preview" hidden><h3>SVG 预览</h3><img id="svgImage" alt="模型生成的 SVG 回答预览"><p id="svgPreviewStatus" class="inline-state" role="status"></p></div>
+    <div id="htmlPreview" class="html-preview" hidden><div class="answer-heading"><h3>HTML 实时预览</h3><div class="answer-tools"><button id="reloadHTML" class="icon-button" aria-label="重新加载预览" data-tooltip="重新加载预览" data-icon="RefreshCw"></button><button id="stopHTML" class="icon-button" aria-label="停止预览" data-tooltip="停止预览" data-icon="Power"></button></div></div><div id="htmlFrameHost"></div><p id="htmlPreviewStatus" class="inline-state" role="status"></p></div>
+    <pre id="testAnswer" tabindex="0">当前模型和题目暂无回答</pre>
+    <div id="answerAnalysis" class="answer-analysis" hidden></div>
+    <form id="answerReview" class="answer-review" hidden>
+      <div class="section-heading"><h2>人工审核</h2><span id="reviewStatus" class="meta"></span></div>
+      <div class="review-fields"><label>审核结论<select name="decision"><option value="pending">待确认</option><option value="accepted">确认通过</option><option value="rejected">标记问题</option></select></label><label>审核备注<textarea name="note" rows="3" maxlength="1000" placeholder="记录判断依据或待复核的问题"></textarea></label></div>
+      <div class="dialog-actions"><span class="meta">审核仅记录评价，不改变模型门禁。</span><button class="primary"><i data-icon="Check"></i>保存审核</button></div>
+      <p id="reviewMessage" class="inline-state" role="status"></p>
+    </form>
+    <div class="test-content">
+      <div><details><summary>提示词原文</summary><pre id="promptText"></pre></details></div>
+      <aside class="guidance"><h3>结果参考与限制</h3><p id="guidance"></p></aside>
+    </div>
+  </section>
+  <section id="view-fingerprint" class="view" role="tabpanel" aria-labelledby="tab-fingerprint" hidden>
+    <div class="section-heading"><h2>ModelTrace</h2><span class="meta">18 个候选 / GPT + Claude</span></div>
+    <div class="test-controls trace-controls">
+      <label>检测模型<select id="traceModel" aria-label="指纹检测模型"></select></label>
+      <label>检测批次<select id="traceBatch" aria-label="指纹检测批次"></select></label>
+      <button id="traceRun" class="primary"><i data-icon="Fingerprint"></i><span>运行三条指纹挑战</span></button>
+    </div>
+    <p class="disclaimer">概率仅表示当前候选库内的相似程度，不证明模型身份；指纹结果不改变门禁。</p>
+    <div id="traceResults" aria-live="polite"></div>
+  </section>
+  <section id="view-history" class="view" role="tabpanel" aria-labelledby="tab-history" hidden>
+    <div class="section-heading"><h2>检测记录</h2><span id="historyCount" class="meta"></span></div>
+    <div class="history-controls">
+      <label>模型<select id="historyModel" aria-label="记录模型"><option value="">全部模型</option></select></label>
+      <label>结果<select id="historyVerdict" aria-label="记录结果"><option value="">全部结果</option><option value="passed">通过</option><option value="failed">未通过</option><option value="unavailable">不可用</option><option value="manual">人工评价</option><option value="running">进行中</option></select></label>
+      <label>题目<select id="historyPrompt" aria-label="记录题目"><option value="">全部题目</option></select></label>
+      <label>审核<select id="historyReview" aria-label="记录审核"><option value="">全部审核</option><option value="pending">待确认</option><option value="accepted">确认通过</option><option value="rejected">标记问题</option></select></label>
+    </div>
+    <div class="answer-tools"><button id="exportHistory" class="icon-button" aria-label="导出筛选记录" data-tooltip="导出筛选记录" data-icon="Download"></button><button id="clearHistory" class="icon-button" aria-label="清理筛选记录" data-tooltip="清理筛选记录" data-icon="Trash2"></button></div>
+    <div id="results"></div>
+    <details id="answerCompare"><summary>回答对比</summary><div class="history-controls"><label>回答 A<select id="compareA" aria-label="对比回答 A"></select></label><label>回答 B<select id="compareB" aria-label="对比回答 B"></select></label></div><div class="compare-columns"><div><p id="compareMetaA" class="meta"></p><pre id="compareTextA"></pre></div><div><p id="compareMetaB" class="meta"></p><pre id="compareTextB"></pre></div></div></details>
+    <button id="loadHistory" class="secondary" hidden>加载更多记录</button>
+  </section>
+  <footer class="footer"><span>Intelligence Check</span><span id="lastSync">等待连接</span></footer>
+</main>
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+  <div class="dialog-heading"><h2 id="settingsTitle">连接与预算</h2><button id="closeSettings" class="icon-button" data-icon="X" aria-label="关闭设置" data-tooltip="关闭设置"></button></div>
+  <form id="config">
+    <div class="fields">
+      <label>Magpie 网关 URL<input name="gateway_url" type="url" placeholder="http://127.0.0.1:3425" required autocomplete="off"></label>
+      <label>网关 Key<span class="secret-field"><input name="gateway_key" autocomplete="off" placeholder="本机默认：magpie"><button type="button" id="showKey" class="icon-button" data-icon="Eye" aria-label="显示输入的 Key" data-tooltip="显示输入的 Key"></button></span></label>
+      <p id="keyState" class="field-note"></p>
+      <label>Magpie 日志绝对路径<input name="log_path" placeholder="/srv/magpie/gateway.log" autocomplete="off"></label>
+      <p id="logHealth" class="field-note"></p>
+      <label>每日每模型请求上限<input name="daily_limit" type="number" min="1" max="10000" value="120" required></label>
+    </div>
+    <div class="dialog-actions"><button type="button" id="checkConnection" class="secondary"><i data-icon="Activity"></i>验证连接</button><button class="primary"><i data-icon="Check"></i>保存设置</button></div>
+    <p id="configMessage" class="inline-state" role="status"></p>
+  </form>
+</dialog>
+</body>
+</html>

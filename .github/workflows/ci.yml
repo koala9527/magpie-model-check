@@ -1,0 +1,166 @@
+name: Model-check release gates
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  race:
+    name: Required Go race gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CGO_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Enforced race detector (compiler errors fail the job)
+        run: npm run test:race
+
+  cross-compile:
+    name: Six CGO0 builds and packaged-content gate (compile only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: npm run build:release
+      - run: npm run test:package -- --release-dir dist --require-all-targets --output-dir dist/npm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compile-only-cgo0
+          if-no-files-found: error
+          path: |
+            dist/magpie-model-check-*
+            dist/manifest.json
+            dist/checksums.txt
+            dist/binary-regression.json
+            dist/npm/*.tgz
+            dist/npm/package-check.json
+
+  native-install:
+    name: Native ${{ matrix.goos }}/${{ matrix.goarch }} portable-Magpie install
+    needs: cross-compile
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            goos: windows
+            goarch: amd64
+          - runner: windows-11-arm
+            goos: windows
+            goarch: arm64
+          - runner: macos-15-intel
+            goos: darwin
+            goarch: amd64
+          - runner: macos-15
+            goos: darwin
+            goarch: arm64
+          - runner: ubuntu-24.04
+            goos: linux
+            goarch: amd64
+          - runner: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+    env:
+      CGO_ENABLED: '0'
+      EXPECTED_GOOS: ${{ matrix.goos }}
+      EXPECTED_GOARCH: ${{ matrix.goarch }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: compile-only-cgo0
+          path: compiled-release
+      - name: Assert native runner architecture, not emulated cross-compile success
+        run: >-
+          node --input-type=module -e
+          "import assert from 'node:assert/strict'; import {nativeTarget} from './scripts/package-check.mjs';
+          assert.deepEqual(nativeTarget(), {goos:process.env.EXPECTED_GOOS,goarch:process.env.EXPECTED_GOARCH});"
+      - name: Build native test binary with modernc CGO0
+        run: npm run build:release -- --target "$EXPECTED_GOOS/$EXPECTED_GOARCH"
+      - name: Verify native Windows private ACL with bounded diagnostics
+        if: runner.os == 'Windows'
+        run: node scripts/ci-test-diagnostics.mjs --windows-acl-probe
+      - name: Retained Go, vet, Node, old/new frontend modules and actual npm pack
+        run: |
+          set +e
+          npm test > "$RUNNER_TEMP/model-check-tests.log" 2>&1
+          suite_status=$?
+          set -e
+          cat "$RUNNER_TEMP/model-check-tests.log"
+          node scripts/ci-test-diagnostics.mjs "$RUNNER_TEMP/model-check-tests.log" "$suite_status"
+          exit "$suite_status"
+      - name: Download pinned checksummed magpie-cli-* host and Windows Bun
+        run: node scripts/magpie-integration.mjs --download-magpie --output-dir "$RUNNER_TEMP/model-check-host"
+      - name: Install the same six-target npm release and smoke real portable Magpie
+        env:
+          MAGPIE_BINARY: ${{ env.MAGPIE_BINARY }}
+          MAGPIE_BUN: ${{ env.MAGPIE_BUN }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          package="$PWD/compiled-release/npm/magpie-model-check-${version}.tgz"
+          npm run test:install -- --tarball "$package" --evidence-dir artifacts/rebuild-work-20261117/release-tooling-ci/install
+          npm run test:clients -- --tarball "$package" --evidence-dir artifacts/rebuild-work-20261117/release-tooling-ci/clients
+      - name: Preserve native runtime evidence (not private fixture databases)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.goos }}-${{ matrix.goarch }}
+          if-no-files-found: error
+          path: |
+            artifacts/rebuild-work-20261117/release-tooling-ci/**/install-check.json
+
+  release-gate:
+    name: Compilation, race and six native installations all required
+    if: ${{ always() }}
+    needs: [race, cross-compile, native-install]
+    runs-on: ubuntu-24.04
+    env:
+      NEEDS_JSON: ${{ toJSON(needs) }}
+    steps:
+      - name: Reject failed, cancelled, skipped or missing mandatory jobs
+        run: |
+          node --input-type=module -e '
+            import assert from "node:assert/strict";
+            const needs = JSON.parse(process.env.NEEDS_JSON);
+            for (const name of ["race", "cross-compile", "native-install"]) {
+              assert.equal(needs[name]?.result, "success", `${name} is not a successful mandatory gate`);
+            }
+            console.log("PASS: race, six CGO0 builds, packaged content and six native portable-Magpie installations");
+          '

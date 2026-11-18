@@ -1,0 +1,14 @@
+/bin/*
+!/bin/magpie-model-check-*
+/dist/
+/artifacts/
+/data/
+/node_modules/
+*.tmp
+/plugin/.runtime/
+/internal/check/.p1-retirement/
+.env
+.env.*
+*.db
+*.db-wal
+*.db-shm

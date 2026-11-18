@@ -1,0 +1,36 @@
+name: 题库建议 / Question Bank Suggestion
+description: 推荐新题目，或反馈现有题目的实际测试表现。
+title: "[Question Bank] "
+body:
+  - type: input
+    id: source
+    attributes:
+      label: 来源与授权 / Source and License
+      description: 提供原始链接；自创题请注明。
+    validations:
+      required: true
+  - type: textarea
+    id: prompt
+    attributes:
+      label: 完整题目 / Complete Prompt
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期表现与评分依据 / Expected Behavior and Scoring
+      description: 说明哪些结论可自动验证，哪些必须人工审核。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 实测证据 / Test Evidence
+      description: 提供模型、测试日期、原始回答与审核结论；移除 Key、管理链接和其他敏感信息。
+    validations:
+      required: true
+  - type: textarea
+    id: limits
+    attributes:
+      label: 局限与误判 / Limitations
+      description: 描述已知误判、重复测试稳定性，以及是否依赖外部资源。

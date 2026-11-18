@@ -1,0 +1,73 @@
+{
+  "name": "magpie-model-check",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./plugin/index.mjs",
+  "files": [
+    "plugin/index.mjs",
+    "plugin/runtime.mjs",
+    "plugin/route.middleware.mjs",
+    "plugin/route-crypto.mjs",
+    "plugin/page/index.html",
+    "plugin/page/loader.js",
+    "plugin/page/page.css",
+    "plugin/page/icon.svg",
+    "bin/magpie-model-check-windows-amd64.exe",
+    "bin/magpie-model-check-windows-arm64.exe",
+    "bin/magpie-model-check-darwin-amd64",
+    "bin/magpie-model-check-darwin-arm64",
+    "bin/magpie-model-check-linux-amd64",
+    "bin/magpie-model-check-linux-arm64",
+    "third_party/modeltrace/LICENSE",
+    "third_party/modeltrace/README.md",
+    "third_party/lucide/LICENSE",
+    "third_party/fonts/SpaceGrotesk-OFL.txt",
+    "third_party/fonts/SpaceMono-OFL.txt",
+    "README.md",
+    "LICENSE"
+  ],
+  "magpie": {
+    "middleware": "./plugin/route.middleware.mjs",
+    "page": {
+      "title": "Magpie Model Check",
+      "titles": {
+        "zh": "模型行为检测"
+      },
+      "file": "./plugin/page/index.html",
+      "icon": "icon.svg",
+      "service": {
+        "port": 3479,
+        "option": "port"
+      }
+    }
+  },
+  "scripts": {
+    "test": "node scripts/test.mjs",
+    "test:go": "node scripts/test.mjs --go",
+    "test:vet": "node scripts/test.mjs --vet",
+    "test:race": "node scripts/test.mjs --race",
+    "test:plugin": "node scripts/test.mjs --plugin",
+    "test:node": "node scripts/test.mjs --node",
+    "test:frontend": "node scripts/test.mjs --frontend",
+    "test:package": "node scripts/package-check.mjs",
+    "test:tooling": "node --test scripts/tooling.test.mjs",
+    "test:release": "npm run build:release && node scripts/package-check.mjs --release-dir dist --require-all-targets --output-dir dist/npm",
+    "build:release": "node scripts/build-release.mjs",
+    "test:magpie": "node scripts/magpie-integration.mjs",
+    "test:install": "node scripts/install-check.mjs",
+    "test:clients": "node scripts/client-check.mjs"
+  },
+  "description": "Behavioral fingerprint-based model identity checking for Magpie.",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/koala9527/magpie-model-check.git"
+  },
+  "homepage": "https://github.com/koala9527/magpie-model-check",
+  "license": "MIT",
+  "keywords": [
+    "magpie-plugin",
+    "model-identity",
+    "behavioral-fingerprint",
+    "modeltrace"
+  ]
+}

@@ -1,0 +1,14 @@
+artifacts/
+data/
+plugin/.runtime/
+plugin/*.test.mjs
+plugin/cloudflared-runtime.mjs
+plugin/console-readiness.mjs
+plugin/gateway-discovery.mjs
+plugin/gate.middleware.js
+bin/quality-check*
+*.db
+*.db-wal
+*.db-shm
+*.tmp
+.env*
